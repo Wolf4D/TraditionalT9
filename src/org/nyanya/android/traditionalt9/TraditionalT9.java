@@ -6,7 +6,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
-import android.os.SystemClock;
+
 import android.accessibilityservice.AccessibilityServiceInfo;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -25,7 +25,6 @@ import android.view.inputmethod.CompletionInfo;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputConnection;
 import android.widget.Toast;
-import android.text.TextUtils;
 
 public class TraditionalT9 extends InputMethodService implements
 		KeyboardView.OnKeyboardActionListener {
@@ -77,7 +76,7 @@ public class TraditionalT9 extends InputMethodService implements
 	private static final int CAPS_ALL = 2;
 	private final static int[] CAPS_CYCLE = { CAPS_OFF, CAPS_SINGLE, CAPS_ALL };
 
-	private final static int T9DELAY = 900;
+	private final static int T9DELAY = 1200;
 	final Handler t9releasehandler = new Handler();
 	Runnable mt9release = new Runnable() {
 		@Override
@@ -93,7 +92,7 @@ public class TraditionalT9 extends InputMethodService implements
 	public static final int MODE_NUM = 2;
 	private static final int[] MODE_CYCLE = { MODE_LANG, MODE_TEXT, MODE_NUM };
 	private int mKeyMode;
-	private InputConnection currentInputConnection = null;
+
 	private SharedPreferences pref;
 	private Toast wordNotFound;
 	/**
@@ -140,7 +139,7 @@ public class TraditionalT9 extends InputMethodService implements
 	 */
 	@Override
 	public View onCreateInputView() {
-		//updateKeyMode();
+		updateKeyMode();
 		View v = getLayoutInflater().inflate(R.layout.mainview, null);
 		interfacehandler.changeView(v);
 		if (mKeyMode == MODE_LANG) {
@@ -168,7 +167,7 @@ public class TraditionalT9 extends InputMethodService implements
 		}
 		mSymbolPopup.doShow(getWindow().getWindow().getDecorView());
 	}
-
+		
 	protected void showSmileyPage() {
 		if (mSmileyPopup == null) {
 			mSmileyPopup = new SmileyDialog(this, getLayoutInflater().inflate(R.layout.symbolview,
@@ -186,50 +185,17 @@ public class TraditionalT9 extends InputMethodService implements
 		mComposingI.setLength(0);
 		mWordFound = true;
 	}
-
-	private String getSurroundingWord() {
-		CharSequence before = currentInputConnection.getTextBeforeCursor(50, 0);
-		CharSequence after = currentInputConnection.getTextAfterCursor(50, 0);
-		int bounds = -1;
-		if (!TextUtils.isEmpty(before)) {
-			bounds = before.length() -1;
-			while (bounds > 0 && !Character.isWhitespace(before.charAt(bounds))) {
-				bounds--;
-			}
-			before = before.subSequence(bounds, before.length());
-		}
-		if (!TextUtils.isEmpty(after)) {
-			bounds = 0;
-			while (bounds < after.length() && !Character.isWhitespace(after.charAt(bounds))) {
-				bounds++;
-			}
-			Log.d("getSurroundingWord", "after:"+after.toString());
-			after = after.subSequence(0, bounds);
-		}
-		return before.toString().trim() + after.toString().trim();
-		}
-
 	protected void showAddWord() {
 		if (mKeyMode == MODE_LANG) {
-			// decide if we are going to look for work to base on
-			String template = mComposing.toString();
-			if (template.length() == 0) {
-				//get surrounding word:
-				template = getSurroundingWord();
-			}
-			Log.d("showAddWord", "WORD: " + template);
 			Intent awintent = new Intent(TraditionalT9.this, AddWordAct.class);
 			awintent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
 			awintent.addFlags(Intent.FLAG_ACTIVITY_NO_HISTORY);
-			// awintent.putExtra("org.nyanya.android.traditionalt9.word", mComposing.toString());
-			awintent.putExtra("org.nyanya.android.traditionalt9.word", template);
+			awintent.putExtra("org.nyanya.android.traditionalt9.word", mComposing.toString());
 			awintent.putExtra("org.nyanya.android.traditionalt9.lang", mLang);
 			clearState();
-			// InputConnection ic = getCurrentInputConnection();
-			// ic.setComposingText("", 0);
-			// ic.finishComposingText();
-			currentInputConnection.setComposingText("", 0);
-			currentInputConnection.finishComposingText();
+			InputConnection ic = getCurrentInputConnection();
+			ic.setComposingText("", 0);
+			ic.finishComposingText();
 			updateCandidates();
 			//onFinishInput();
 			mWordFound = true;
@@ -271,9 +237,8 @@ public class TraditionalT9 extends InputMethodService implements
 //		Log.d("onStartInput", "attribute.inputType: " + attribute.inputType +
 //			" restarting? " + restarting);
 		//Utils.printFlags(attribute.inputType);
-		currentInputConnection = getCurrentInputConnection();
 
-		if (attribute.inputType == 0 || attribute.inputType == 3) {
+		if (attribute.inputType == 0) {
 			// don't do anything when not in any kind of edit field.
 			// should also turn off input screen and stuff
 			mEditing = NON_EDIT;
@@ -432,8 +397,7 @@ public class TraditionalT9 extends InputMethodService implements
 	private void finish() {
 		// Log.d("finish", "why?");
 		// Clear current composing text and candidates.
-		// pickSelectedCandidate(getCurrentInputConnection());
-		pickSelectedCandidate(currentInputConnection);
+		pickSelectedCandidate(getCurrentInputConnection());
 		clearState();
 		// updateCandidates();
 
@@ -470,7 +434,7 @@ public class TraditionalT9 extends InputMethodService implements
 								  int candidatesStart, int candidatesEnd) {
 		super.onUpdateSelection(oldSelStart, oldSelEnd, newSelStart, newSelEnd, candidatesStart,
 				candidatesEnd);
-		if (mKeyMode == MODE_TEXT) { return; } // stops the ghost fast-type commit
+
 		// If the current selection in the text view changes, we should
 		// clear whatever candidate text we have.
 		if ((mComposing.length() > 0 || mComposingI.length() > 0)
@@ -478,11 +442,9 @@ public class TraditionalT9 extends InputMethodService implements
 			mComposing.setLength(0);
 			mComposingI.setLength(0);
 			updateCandidates();
-			// InputConnection ic = getCurrentInputConnection();
-			// if (ic != null) {
-			// ic.finishComposingText();
-			if (currentInputConnection != null) {
-				currentInputConnection.finishComposingText();
+			InputConnection ic = getCurrentInputConnection();
+			if (ic != null) {
+				ic.finishComposingText();
 			}
 		}
 	}
@@ -502,17 +464,17 @@ public class TraditionalT9 extends InputMethodService implements
 	 * @see android.inputmethodservice.InputMethodService#onKeyMultiple(int, int, android.view.KeyEvent)
 	 */
 
-
+	
 	/**
 	 * Use this to monitor key events being delivered to the application. We get
 	 * first crack at them, and can either resume them or let them continue to
 	 * the app.
 	 */
-
+	
 	@Override
 	public boolean onKeyDown(int keyCode, KeyEvent event) {
-		Log.d("onKeyDown", "Key: " + event + " repeat?: " +
-				event.getRepeatCount() + " long-time: " + event.isLongPress());
+			Log.d("onKeyDown", "Key: " + event + " repeat?: " +
+			event.getRepeatCount() + " long-time: " + event.isLongPress());
 		if (mEditing == NON_EDIT) {
 			// // catch for UI weirdness on up event thing
 			return false;
@@ -535,7 +497,7 @@ public class TraditionalT9 extends InputMethodService implements
 				keyCode = KeyEvent.KEYCODE_SOFT_LEFT;
 				break;
 		}
-
+		
 		switch (keyCode) {
 				
 /*			case KeyEvent.KEYCODE_DPAD_CENTER:
@@ -645,9 +607,9 @@ public class TraditionalT9 extends InputMethodService implements
 					toastLT = getResources().getString(R.string.toastLTRU);
 				} else if (mLangIndex == 0){
 					toastLT = getResources().getString(R.string.toastLTEN);
-				}
+				} 
 				break;
-
+				
 			case 2:
 				if (mCapsMode == CAPS_ALL){
 					toastLT = getResources().getString(R.string.toastLTcapsALL);
@@ -655,11 +617,11 @@ public class TraditionalT9 extends InputMethodService implements
 					toastLT = getResources().getString(R.string.toastLTcapsSINGLE);
 				} else if (mCapsMode == CAPS_OFF){
 					toastLT = getResources().getString(R.string.toastLTcapsOFF);
-				}
+				} 
 				break;
 
-			case 3:
-				if (mKeyMode == MODE_LANG) {
+			case 3:	
+				if (mKeyMode == MODE_LANG) { 
 					toastLT = getResources().getString(R.string.toastLT_T9);
 				} else if (mKeyMode == MODE_TEXT) {
 					toastLT = getResources().getString(R.string.toastLT_text);
@@ -668,12 +630,12 @@ public class TraditionalT9 extends InputMethodService implements
 				}
 				break;
 		}
-
-		toast.setText(toastLT);
-		toast.show();
-		toast.cancel();
+    
+	toast.setText(toastLT);
+    toast.show(); 
+    toast.cancel();
 	}
-
+	
 	@Override
 	public boolean onKeyLongPress(int keyCode, KeyEvent event) {
 		// consume since we will assume we have already handled the long press
@@ -705,7 +667,7 @@ public class TraditionalT9 extends InputMethodService implements
 					if (mLangsAvailable.length > 1){
 						nextLang();
 						speakKeymode(1);
-					} else {
+				        } else {
 						showSmileyPage(); // TODO: replace with lang select if lang thing
 					}
 					return true;
@@ -768,18 +730,18 @@ public class TraditionalT9 extends InputMethodService implements
 		return true;
 	}
 
-
+	
 
 	private Timer mDoubleClickTimer;
 	private boolean possibleDoubleClick = false;
-
+	
 	/**
 	 * Use this to monitor key events being delivered to the application. We get
 	 * first crack at them, and can either resume them or let them continue to
 	 * the app.
 	 */
 
-	private Handler mTimerHandler = new Handler();
+    private Handler mTimerHandler = new Handler();
 	@Override
 	public boolean onKeyUp(int keyCode, KeyEvent event) {
 //		Log.d("onKeyUp", "Key: " + keyCode + " repeat?: " +
@@ -812,111 +774,106 @@ public class TraditionalT9 extends InputMethodService implements
 				break;
 		}
 
-		switch (keyCode) {
-			case KeyEvent.KEYCODE_POUND:
-				if(keyCode==KeyEvent.KEYCODE_POUND){
-					//or whatever key you want to check for double-clicks
-					if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
-					if(!possibleDoubleClick){
-						if ((event.getFlags() & KeyEvent.FLAG_CANCELED_LONG_PRESS) == 0) {
-							possibleDoubleClick = true;
-							mDoubleClickTimer = new Timer();
-							mDoubleClickTimer.schedule(new TimerTask() {
-								@Override
-								public void run() {
-									if (mKeyMode == MODE_NUM) {
-										handleCharacter(KeyEvent.KEYCODE_POUND);
-									} else {
-										new Thread(new Runnable() {
-											public void run() {
-												handleShift();
-												speakKeymode(2);
-												toast.cancel();
-											}
-										}).start();
-									}
-									//single click detected
-									//handle it here
-									possibleDoubleClick = false;
-								}
-							},350);
+	switch (keyCode) {
+		case KeyEvent.KEYCODE_POUND:
+			if(keyCode==KeyEvent.KEYCODE_POUND){
+				 //or whatever key you want to check for double-clicks
+				if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
+				if(!possibleDoubleClick){
+					if ((event.getFlags() & KeyEvent.FLAG_CANCELED_LONG_PRESS) == 0) {
+					possibleDoubleClick = true;
+					mDoubleClickTimer = new Timer();
+					mDoubleClickTimer.schedule(new TimerTask() {
+						@Override
+						public void run() {
+							if (mKeyMode == MODE_NUM) {
+								handleCharacter(KeyEvent.KEYCODE_POUND);
+							} else {
+								new Thread(new Runnable() {
+									public void run() {
+										handleShift();
+										speakKeymode(2);
+										toast.cancel();
+										}
+									}).start();
 						}
-					}else{
-						nextKeyMode();
-						speakKeymode(3);
-						//double click detected
-						//handle it here
-						possibleDoubleClick = false;
+	                	//single click detected
+	                    //handle it here
+	                    possibleDoubleClick = false;
+	                }
+	            },350);
 					}
-					//... other key processing if you need it
-					return false;
-				}
-				break;
-		}
+	        }else{
+				nextKeyMode();
+				speakKeymode(3);
+	            //double click detected
+	            //handle it here
+	            possibleDoubleClick = false;
+	        }
+	//... other key processing if you need it
+	        return false;
+	        }
+			break;
+	}
+	
 
-
-		switch (keyCode) {
-			case KeyEvent.KEYCODE_STAR:
-				if(keyCode==KeyEvent.KEYCODE_STAR){
-					//or whatever key you want to check for double-clicks
-					if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
-					if(!possibleDoubleClick){
-						if ((event.getFlags() & KeyEvent.FLAG_CANCELED_LONG_PRESS) == 0) {
-							possibleDoubleClick = true;
-							mDoubleClickTimer = new Timer();
-							mDoubleClickTimer.schedule(new TimerTask() {
-								@Override
-								public void run() {
-									if (mKeyMode == MODE_NUM) {
-										handleCharacter(KeyEvent.KEYCODE_STAR);
-									} else {
-										mTimerHandler.post(new Runnable() {
-											public void run() {
-												if (mWordFound) {
-													if (mKeyMode != MODE_NUM && mComposing.length() == 0) {
-														showSmileyPage();
-													}
-													else if (mKeyMode != MODE_NUM && mComposing.length() > 0) {
-
-														handleDPAD(KeyEvent.KEYCODE_STAR, mDPADkeyEvent, false);
-													}
-												} else {
-													showAddWord();
+	switch (keyCode) {
+		case KeyEvent.KEYCODE_STAR:
+			if(keyCode==KeyEvent.KEYCODE_STAR){
+				 //or whatever key you want to check for double-clicks
+				if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
+				if(!possibleDoubleClick){
+					if ((event.getFlags() & KeyEvent.FLAG_CANCELED_LONG_PRESS) == 0) {
+					possibleDoubleClick = true;
+					mDoubleClickTimer = new Timer();
+					mDoubleClickTimer.schedule(new TimerTask() {
+						@Override
+						public void run() {
+							if (mKeyMode == MODE_NUM) {
+								handleCharacter(KeyEvent.KEYCODE_STAR);
+							} else {
+								mTimerHandler.post(new Runnable() {
+									public void run() {
+										if (mWordFound) {
+										    if (mKeyMode != MODE_NUM && mComposing.length() == 0) {
+												showSmileyPage();
 												}
-											}
-										});
-									}
-									//single click detected
-									//handle it here
+										    else if (mKeyMode != MODE_NUM && mComposing.length() > 0) {
+												
+												handleDPAD(KeyEvent.KEYCODE_STAR, mDPADkeyEvent, false);
+												}
+										} else {
+												showAddWord();
+											} 
+										}
+									});
+						}
+	                	//single click detected
+	                    //handle it here
 
-									possibleDoubleClick = false;
-								}
-							},350);
-						}
-					}else{
-						if (mKeyMode != MODE_NUM && mComposing.length() > 0) {
-							handleDPAD(KeyEvent.KEYCODE_DPAD_UP, event, false);
-						}
-						if (mKeyMode != MODE_NUM && mComposing.length() == 0) {
-
-							showSymbolPage();
-						}
-						//double click detected
-						//handle it here
-						possibleDoubleClick = false;
+	                    possibleDoubleClick = false;
+	                }
+	            },350);
 					}
-					//... other key processing if you need it
-					return false;
+	        }else{
+				if (mKeyMode != MODE_NUM && mComposing.length() > 0) {
+					handleDPAD(KeyEvent.KEYCODE_DPAD_UP, event, false);
 				}
-				break;
-		}
-
+				if (mKeyMode != MODE_NUM && mComposing.length() == 0) {
+					
+					showSymbolPage();
+					}
+	            //double click detected
+	            //handle it here
+	            possibleDoubleClick = false;
+	        }
+	//... other key processing if you need it
+	        return false;
+	        }
+			break;
+	}
+	
 		switch (keyCode) {
-			case KeyEvent.KEYCODE_DPAD_CENTER: {
-				InputConnection ic = getCurrentInputConnection();
-				ic.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, KeyEvent.KEYCODE_ENTER));
-			}
-				break;
 /*			case KeyEvent.KEYCODE_DPAD_CENTER:
 				if (interfacehandler != null) {
 					interfacehandler.setPressed(keyCode, false);
@@ -996,14 +953,17 @@ public class TraditionalT9 extends InputMethodService implements
 	/**
 	 * Helper function to commit any text being composed in to the editor.
 	 */
-	 // private void commitTyped() { commitTyped(getCurrentInputConnection()); }
 	private void commitTyped() {
+		commitTyped(getCurrentInputConnection());
+	}
+
+
+	private void commitTyped(InputConnection ic) {
 		if (interfacehandler != null) {
 			interfacehandler.midButtonUpdate(false);
 			interfacehandler.showNotFound(false);
 		}
-		// pickSelectedCandidate(ic);
-		pickSelectedCandidate(currentInputConnection);
+		pickSelectedCandidate(ic);
 		clearState();
 		updateCandidates();
 		setCandidatesViewShown(false);
@@ -1018,8 +978,7 @@ public class TraditionalT9 extends InputMethodService implements
 		if (attr != null && mCapsMode != CAPS_ALL) {
 			int caps = 0;
 			if (attr.inputType != InputType.TYPE_NULL) {
-				// caps = getCurrentInputConnection().getCursorCapsMode(attr.inputType);
-				caps = currentInputConnection.getCursorCapsMode(attr.inputType);
+				caps = getCurrentInputConnection().getCursorCapsMode(attr.inputType);
 			}
 			// mInputView.setShifted(mCapsLock || caps != 0);
 			// Log.d("updateShift", "caps: " + caps);
@@ -1043,18 +1002,13 @@ public class TraditionalT9 extends InputMethodService implements
 	 * I'll have to onText
 	 */
 	private void keyDownUp(int keyEventCode) {
-		// InputConnection ic = getCurrentInputConnection();
-		// KeyEvent kv = KeyEvent.changeFlags(new KeyEvent(KeyEvent.ACTION_DOWN, keyEventCode),
-		//		KeyEvent.FLAG_SOFT_KEYBOARD);
-		// ic.sendKeyEvent(kv);
-		//kv = KeyEvent.changeFlags(new KeyEvent(KeyEvent.ACTION_UP, keyEventCode),
-		//		KeyEvent.FLAG_SOFT_KEYBOARD);
-		// ic.sendKeyEvent(kv);
-		currentInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_DOWN, keyEventCode));
-		currentInputConnection.sendKeyEvent(new KeyEvent(KeyEvent.ACTION_UP, keyEventCode));
-		}
-	private void keyDownUp(String keys) {
-		currentInputConnection.sendKeyEvent(new KeyEvent(SystemClock.uptimeMillis(), keys, 0, 0));
+		InputConnection ic = getCurrentInputConnection();
+		KeyEvent kv = KeyEvent.changeFlags(new KeyEvent(KeyEvent.ACTION_DOWN, keyEventCode),
+				KeyEvent.FLAG_SOFT_KEYBOARD);
+		ic.sendKeyEvent(kv);
+		kv = KeyEvent.changeFlags(new KeyEvent(KeyEvent.ACTION_UP, keyEventCode),
+				KeyEvent.FLAG_SOFT_KEYBOARD);
+		ic.sendKeyEvent(kv);
 	}
 
 
@@ -1098,20 +1052,15 @@ public class TraditionalT9 extends InputMethodService implements
 
 	@Override
 	public void onText(CharSequence text) {
-		// InputConnection ic = getCurrentInputConnection();
-		// if (ic == null)
-		if (currentInputConnection == null)
+		InputConnection ic = getCurrentInputConnection();
+		if (ic == null)
 			return;
-		// ic.beginBatchEdit();
-		currentInputConnection.beginBatchEdit();
+		ic.beginBatchEdit();
 		if (mComposing.length() > 0 || mComposingI.length() > 0) {
-			// commitTyped(ic);
-			commitTyped();
+			commitTyped(ic);
 		}
-		// ic.commitText(text, 1);
-		// ic.endBatchEdit();
-		currentInputConnection.commitText(text, 1);
-		currentInputConnection.endBatchEdit();
+		ic.commitText(text, 1);
+		ic.endBatchEdit();
 		updateShiftKeyState(getCurrentInputEditorInfo());
 	}
 
@@ -1165,7 +1114,6 @@ public class TraditionalT9 extends InputMethodService implements
 							prefix = mPreviousWord;
 						} else {
 							if (suggestions) {
-								if (mCandidateView.mSelectedIndex == -1) { mCandidateView.mSelectedIndex = 0; }
 								prefix = mPreviousWord = mSuggestionStrings.get(mCandidateView.mSelectedIndex);
 							} else {
 								prefix = mPreviousWord;
@@ -1228,13 +1176,13 @@ public class TraditionalT9 extends InputMethodService implements
 			}
 		}
 	}
-
+	
 	private void setSuggestions(List<String> suggestions, int initialSel) {
 		if (suggestions != null && suggestions.size() > 0) {
 			setCandidatesViewShown(true);
 			/*String selectedWord = mSuggestionStrings.get(mCandidateView.mSelectedIndex);
 			Toast.makeText(this, selectedWord, Toast.LENGTH_SHORT).show();*/
-
+			
 		}
 		if (mCandidateView != null) {
 			mCandidateView.setSuggestions(suggestions, initialSel);
@@ -1268,8 +1216,7 @@ public class TraditionalT9 extends InputMethodService implements
 				mPreviousWord = "";
 			}
 			updateCandidates(true);
-			// getCurrentInputConnection().setComposingText(mComposing, 1);
-			currentInputConnection.setComposingText(mComposing, 1);
+			getCurrentInputConnection().setComposingText(mComposing, 1);
 		} else if (length > 0 || length2 > 0) {
 			mComposing.setLength(0);
 			mComposingI.setLength(0);
@@ -1277,8 +1224,7 @@ public class TraditionalT9 extends InputMethodService implements
 			interfacehandler.showNotFound(false);
 			mSuggestionStrings.clear();
 			mPreviousWord = "";
-			// getCurrentInputConnection().commitText("", 0);
-			currentInputConnection.commitText("", 0);
+			getCurrentInputConnection().commitText("", 0);
 			updateCandidates();
 		} else {
 			mPreviousWord = "";
@@ -1292,26 +1238,25 @@ public class TraditionalT9 extends InputMethodService implements
 
 
 	Handler handler1 = new Handler();
-
+	
 	public void handleShift() {
 		handler1.post(new Runnable() {
-			public void run() {
-				// do my own thing here
-				if (mCapsMode == CAPS_CYCLE.length - 1) {
-					mCapsMode = 0;
-				} else {
-					mCapsMode++;
-				}
+		public void run() {
+		// do my own thing here
+		if (mCapsMode == CAPS_CYCLE.length - 1) {
+			mCapsMode = 0;
+		} else {
+			mCapsMode++;
+		}
 
-				if (mKeyMode == MODE_LANG && mComposing.length() > 0) {
-					updateCandidates();
-					// getCurrentInputConnection().setComposingText(mComposing, 1);
-					currentInputConnection.setComposingText(mComposing, 1);
-				}
-				updateKeyMode();
-			}
-		});
+		if (mKeyMode == MODE_LANG && mComposing.length() > 0) {
+			updateCandidates();
+			getCurrentInputConnection().setComposingText(mComposing, 1);
+		}
+		updateKeyMode();
 	}
+		});
+		}
 
 	/**
 	 * handle input of a character. Precondition: ONLY 0-9 AND *# ARE ALLOWED
@@ -1327,44 +1272,43 @@ public class TraditionalT9 extends InputMethodService implements
 					if (mComposing.length() > 0) {
 						commitTyped();
 					} //or whatever key you want to check for double-clicks
-					if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
-					if(!possibleDoubleClick){
-						possibleDoubleClick = true;
-						mDoubleClickTimer = new Timer();
-						mDoubleClickTimer.schedule(new TimerTask() {
-							@Override
-							public void run() {
-								new Thread(new Runnable() {
-									public void run() {
-										onText(" ");
-									}
-								}).start();
-								//single click detected
-								//handle it here
-								possibleDoubleClick = false;
-							}
-						},350);
-					}else{
+			        if(mDoubleClickTimer!=null) {mDoubleClickTimer.cancel();}
+			        if(!possibleDoubleClick){
+			            possibleDoubleClick = true;
+			            mDoubleClickTimer = new Timer();
+			            mDoubleClickTimer.schedule(new TimerTask() {
+			                @Override
+			                public void run() {
+									new Thread(new Runnable() {
+										public void run() {
+											onText(" ");
+											}
+											}).start();
+			                	//single click detected
+			                    //handle it here
+			                    possibleDoubleClick = false;
+			                }
+			            },350);
+			        }else{
 						onText("\n");
-						//double click detected
-						//handle it here
-						possibleDoubleClick = false;
-					}
-					//... other key processing if you need it
-				} else {
-					// do things
-					if (interfacehandler != null) {
-						interfacehandler.midButtonUpdate(true);
-					}
-					keyCode = keyCode - KeyEvent.KEYCODE_0;
-					mComposingI.append(keyCode);
-					updateCandidates();
-					// getCurrentInputConnection().setComposingText(mComposing, 1);
-					currentInputConnection.setComposingText(mComposing, 1);
+			            //double click detected
+			            //handle it here
+			            possibleDoubleClick = false;
+			        }
+			//... other key processing if you need it
+			} else {
+				// do things
+				if (interfacehandler != null) {
+				interfacehandler.midButtonUpdate(true);
 				}
+				keyCode = keyCode - KeyEvent.KEYCODE_0;
+				mComposingI.append(keyCode);
+				updateCandidates();
+				getCurrentInputConnection().setComposingText(mComposing, 1);
+			}
 
-				break;
-
+			break;
+			
 			case MODE_TEXT:
 				t9releasehandler.removeCallbacks(mt9release);
 				if (keyCode == KeyEvent.KEYCODE_POUND) {
@@ -1377,8 +1321,8 @@ public class TraditionalT9 extends InputMethodService implements
 				if (mPrevious == keyCode) {
 					mCharIndex++;
 				} else {
-					// commitTyped(getCurrentInputConnection());
-					commitTyped();
+					commitTyped(getCurrentInputConnection());
+					// updateShiftKeyState(getCurrentInputEditorInfo());
 					newChar = true;
 					mCharIndex = 0;
 					mPrevious = keyCode;
@@ -1400,9 +1344,9 @@ public class TraditionalT9 extends InputMethodService implements
 				}
 
 				mComposing.append(ca[mCharIndex]);
-				// mComposingI.append(keyCode);
-				// getCurrentInputConnection().setComposingText(mComposing, 1);
-				currentInputConnection.setComposingText(mComposing, 1);
+				mComposingI.append(keyCode);
+				getCurrentInputConnection().setComposingText(mComposing, 1);
+
 				t9releasehandler.postDelayed(mt9release, T9DELAY);
 				if (newChar) {
 					// consume single caps
@@ -1434,12 +1378,12 @@ public class TraditionalT9 extends InputMethodService implements
 
 	}
 
-
-
+	
+	
 	// This is a really hacky way to handle DPAD long presses in a way that we can pass them on to
 	// the underlying edit box in a somewhat reliable manner.
 	// (somewhat because there are a few cases where this doesn't work properly or acts strangely.)
-
+	
 	private boolean handleDPAD(int keyCode, KeyEvent event, boolean keyDown) {
 		// Log.d("handleConsumeDPAD", "keyCode: " + keyCode + " isKeyDown: " +
 		// isKeyDown);
@@ -1457,8 +1401,7 @@ public class TraditionalT9 extends InputMethodService implements
 				} else {
 					// pass previous event and future events to super
 					mIgnoreDPADKeyUp = true;
-					// getCurrentInputConnection().sendKeyEvent(mDPADkeyEvent);
-					currentInputConnection.sendKeyEvent(mDPADkeyEvent);
+					getCurrentInputConnection().sendKeyEvent(mDPADkeyEvent);
 					return super.onKeyDown(keyCode, event);
 				}
 			}
@@ -1475,17 +1418,11 @@ public class TraditionalT9 extends InputMethodService implements
 							mCandidateView.scrollSuggestion(1);
 							mCandidateView.requestFocus();
 
-							// getCurrentInputConnection().setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
-							// currentInputConnection.setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
-							if (mSuggestionStrings.size() > mCandidateView.mSelectedIndex)
-								currentInputConnection.setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
+							getCurrentInputConnection().setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
 							return true;
 						case KeyEvent.KEYCODE_DPAD_UP:
 							mCandidateView.scrollSuggestion(-1);
-							//getCurrentInputConnection().setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
-							//currentInputConnection.setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
-							if (mSuggestionStrings.size() > mCandidateView.mSelectedIndex)
-								currentInputConnection.setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
+							getCurrentInputConnection().setComposingText(mSuggestionStrings.get(mCandidateView.mSelectedIndex), 1);
 							return true;
 						case KeyEvent.KEYCODE_DPAD_LEFT:
 						case KeyEvent.KEYCODE_DPAD_RIGHT:
@@ -1495,7 +1432,6 @@ public class TraditionalT9 extends InputMethodService implements
 								commitReset();
 							}
 							// getCurrentInputConnection().sendKeyEvent(mDPADkeyEvent);
-							// currentInputConnection.sendKeyEvent(mDPADkeyEvent);
 							// return super.onKeyUp(keyCode, event);
 							return true;
 					}
@@ -1515,8 +1451,7 @@ public class TraditionalT9 extends InputMethodService implements
 	}
 
 	private void commitReset() {
-		// commitTyped(getCurrentInputConnection());
-		commitTyped();
+		commitTyped(getCurrentInputConnection());
 		charReset();
 		if (mCapsMode == CAPS_SINGLE) {
 			mCapsMode = CAPS_OFF;
@@ -1533,8 +1468,7 @@ public class TraditionalT9 extends InputMethodService implements
 	}
 
 	private void handleClose() {
-		// commitTyped(getCurrentInputConnection());
-		commitTyped();
+		commitTyped(getCurrentInputConnection());
 		requestHideSelf(0);
 	}
 
@@ -1565,8 +1499,7 @@ public class TraditionalT9 extends InputMethodService implements
 		}
 		mComposing.setLength(0);
 		mComposingI.setLength(0);
-		// getCurrentInputConnection().finishComposingText();
-		currentInputConnection.finishComposingText();
+		getCurrentInputConnection().finishComposingText();
 	}
 
 	/**

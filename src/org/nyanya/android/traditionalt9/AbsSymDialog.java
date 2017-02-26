@@ -38,8 +38,7 @@ public abstract class AbsSymDialog extends Dialog implements
 	
 
 	private static final Integer[] smileysImg = {
-			R.drawable.misc, R.drawable.l2, R.drawable.l3, R.drawable.l4, R.drawable.l5, R.drawable.l6, R.drawable.l7, R.drawable.l8 ,R.drawable.l9, R.drawable.misc,
-			R.drawable.smile, R.drawable.winking, R.drawable.laughing, R.drawable.tongue,
+		R.drawable.smile, R.drawable.winking, R.drawable.laughing, R.drawable.tongue, 
 		R.drawable.straight_face, R.drawable.sad, R.drawable.not_talking, R.drawable.nerd, R.drawable.crying, R.drawable.crying2, 
 		R.drawable.love, R.drawable.heart, R.drawable.broken_heart, R.drawable.flower, R.drawable.kiss, R.drawable.big_grin, R.drawable.angry, R.drawable.confused, R.drawable.devil, R.drawable.dizzy, 
 		R.drawable.dont_tell_anyone, R.drawable.bomb, R.drawable.dead, R.drawable.drooling, R.drawable.music, R.drawable.party, R.drawable.sacred, R.drawable.scared, R.drawable.silly, R.drawable.smoking, 

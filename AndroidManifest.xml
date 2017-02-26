@@ -8,16 +8,16 @@
         android:minSdkVersion="9"
         android:targetSdkVersion="14" />
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
-	<uses-configuration
-		android:reqFiveWayNav="true"
-		android:reqHardKeyboard="true"
-		android:reqKeyboardType="qwerty"
-	/>
-	<uses-configuration
-		android:reqFiveWayNav="true"
-		android:reqKeyboardType="twelvekey"
-		android:reqHardKeyboard="true"
-		/>
+    <uses-configuration
+        android:reqFiveWayNav="true"
+        android:reqHardKeyboard="true"
+        android:reqKeyboardType="qwerty"
+        />
+    <uses-configuration
+        android:reqFiveWayNav="true"
+        android:reqKeyboardType="twelvekey"
+        android:reqHardKeyboard="true"
+        />
     <application
         android:allowBackup="false"
         android:icon="@drawable/ic_launcher"
@@ -35,27 +35,26 @@
                 android:resource="@xml/method" />
         </service>
 
-		<service android:name=".DBUpdateService" />
+        <service android:name=".DBUpdateService" />
 
         <activity
             android:name="org.nyanya.android.traditionalt9.TraditionalT9Settings"
             android:label="@string/traditionalt9_settings" >
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
             android:theme="@android:style/Theme.Dialog"
             android:name="org.nyanya.android.traditionalt9.AddWordAct"
             android:label="@string/title_activity_add_word"
-			android:excludeFromRecents="true" >
+            android:excludeFromRecents="true" >
         </activity>
         <activity
             android:theme="@android:style/Theme.Dialog"
             android:name="org.nyanya.android.traditionalt9.Menu1" >
         </activity>
-	</application>
+    </application>
+    </application>
 
 </manifest>

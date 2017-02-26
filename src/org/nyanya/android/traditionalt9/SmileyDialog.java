@@ -7,7 +7,6 @@ import android.view.View;
 public class SmileyDialog extends AbsSymDialog {
 
 	private static final String[] symbols = {
-		" ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
 		":-)", ";-D", "X-D", ":-P", ":-|", ":-(", ":-X", ":-B", ":'-(", ":_(",
 		"(*_*)", "<3", "</3", "@}~>~~", ":-*", "X-D", ":@", "o_0",  ">:-)", "/:-]",
 		"( _ )", "●～*", "X-(", "(*¬*)", "d(^_^)b", "<Л:-0", "0:-)", "=:[]", ":-]", ":-Q",

@@ -1,0 +1,107 @@
+<?xml version="1.0" encoding="utf-8"?>
+<GridLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:columnCount="3"
+    android:orientation="vertical"
+    android:rowCount="5" >
+
+    <Button
+        android:id="@+id/text_keyone"
+        android:layout_column="1"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusUp="@+id/text_keyzero"
+        android:nextFocusLeft="@+id/text_keythree" />
+
+    <Button
+        android:id="@+id/text_keyfour"
+        android:layout_column="1"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusLeft="@+id/text_keythree"  />
+
+    <Button
+        android:id="@+id/text_keyseven"
+        android:layout_column="1"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusLeft="@+id/text_keysix"  />
+
+    <Button
+        android:id="@+id/text_keystar"
+        android:layout_column="1"
+        android:layout_gravity="fill"
+        android:textStyle="bold" 
+        android:contentDescription="@string/symbol_prev"
+        android:drawableLeft="@drawable/page_prev"
+        android:drawableRight="@drawable/numstar"
+        android:nextFocusLeft="@+id/text_keynine" />
+
+    <TextView
+        android:id="@+id/title_symbol_dialog"
+        android:layout_gravity="fill"
+        android:layout_columnSpan="2"
+        android:background="@drawable/button_gradient_orange" />
+    
+    <Button
+        android:id="@+id/text_keytwo"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusUp="@+id/text_keyzero"  />
+
+    <Button
+        android:id="@+id/text_keyfive"
+        android:layout_gravity="fill"
+        android:textStyle="bold"  />
+
+    <Button
+        android:id="@+id/text_keyeight"
+        android:layout_gravity="fill"
+        android:textStyle="bold"  />
+
+    <Button
+        android:id="@+id/text_keyzero"
+        android:layout_gravity="fill"
+        android:textStyle="bold"  />
+
+    
+    <Button
+        android:id="@+id/text_keythree"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusRight="@id/text_keyfour"
+        android:nextFocusUp="@id/text_keyzero"  />
+
+    <Button
+        android:id="@+id/text_keysix"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusRight="@id/text_keyseven"  />
+
+    <Button
+        android:id="@+id/text_keynine"
+        android:layout_gravity="fill"
+        android:textStyle="bold"
+        android:nextFocusRight="@id/text_keystar"  />
+
+    <Button
+        android:id="@+id/text_keypound"
+        android:layout_gravity="fill"
+        android:textStyle="bold" 
+        android:contentDescription="@string/symbol_next"
+        android:drawableLeft="@drawable/poundkey"
+        android:drawableRight="@drawable/page_next"
+        android:nextFocusRight="@id/text_keystar"
+        android:nextFocusDown="@+id/title_symbol_pagenum" />
+
+    <TextView
+        android:id="@+id/title_symbol_pagenum"
+        android:layout_gravity="fill"
+        android:layout_columnSpan="1"
+        android:nextFocusLeft="@id/text_keystar"
+        android:nextFocusRight="@id/text_keyone"
+        android:nextFocusDown="@id/text_keyone"
+        android:background="@drawable/button_gradient_orange" />
+
+</GridLayout>

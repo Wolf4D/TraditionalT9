@@ -1,5 +1,8 @@
 package org.nyanya.android.traditionalt9;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Canvas;
@@ -7,9 +10,7 @@ import android.graphics.Paint;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.view.View;
-
-import java.util.ArrayList;
-import java.util.List;
+import android.widget.Toast;
 
 public class CandidateView extends View {
 
@@ -143,6 +144,7 @@ public class CandidateView extends View {
 				paint.setColor(mColorOther);
 			}
 
+			setFocusable(true);
 			canvas.drawText(suggestion, x + X_GAP, y, paint);
 			paint.setColor(mColorOther);
 			canvas.drawLine(x + wordWidth + 0.5f, bgPadding.top, x + wordWidth + 0.5f, height + 1,
@@ -188,6 +190,7 @@ public class CandidateView extends View {
 		// onDraw(null);
 		invalidate();
 		requestLayout();
+		isFocusable();
 	}
 
 	protected void clear() {

@@ -8,6 +8,8 @@ import android.view.KeyEvent;
 import android.view.View;
 import android.view.Window;
 import android.view.WindowManager;
+import android.widget.Button;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import java.util.Arrays;
@@ -15,28 +17,49 @@ import java.util.Arrays;
 public abstract class AbsSymDialog extends Dialog implements
 		View.OnClickListener {
 
-	protected Context context;
+	private static String insSmiley;
+	private static String insSymbol;
+	private String insPage;
+	private KeyboardView.OnKeyboardActionListener parent;
 	private View mainview;
 	private int pagenum = 1;
 	private int pageoffset = (pagenum - 1) * 10;
 
 	private int MAX_PAGE;
+	private String title;
 	private boolean started;
-
+	public static int ACCESSIBILITY_LIVE_REGION_POLITE;
 	private static final int[] buttons = {
 		R.id.text_keyone,   R.id.text_keytwo,
 		R.id.text_keythree, R.id.text_keyfour,  R.id.text_keyfive,
 		R.id.text_keysix,   R.id.text_keyseven, R.id.text_keyeight,
 		R.id.text_keynine,  R.id.text_keyzero
 	};
+	
+
+	private static final Integer[] smileysImg = {
+			R.drawable.misc, R.drawable.l2, R.drawable.l3, R.drawable.l4, R.drawable.l5, R.drawable.l6, R.drawable.l7, R.drawable.l8 ,R.drawable.l9, R.drawable.misc,
+			R.drawable.smile, R.drawable.winking, R.drawable.laughing, R.drawable.tongue,
+		R.drawable.straight_face, R.drawable.sad, R.drawable.not_talking, R.drawable.nerd, R.drawable.crying, R.drawable.crying2, 
+		R.drawable.love, R.drawable.heart, R.drawable.broken_heart, R.drawable.flower, R.drawable.kiss, R.drawable.big_grin, R.drawable.angry, R.drawable.confused, R.drawable.devil, R.drawable.dizzy, 
+		R.drawable.dont_tell_anyone, R.drawable.bomb, R.drawable.dead, R.drawable.drooling, R.drawable.music, R.drawable.party, R.drawable.sacred, R.drawable.scared, R.drawable.silly, R.drawable.smoking, 
+		R.drawable.smug, R.drawable.thinking, R.drawable.yawn, R.drawable.cat, R.drawable.dog, R.drawable.pig, R.drawable.clown, R.drawable.cool, R.drawable.vomit, R.drawable.hug, 
+		R.drawable.sick, R.drawable.loser, R.drawable.sleeping, R.drawable.wave, R.drawable.whew, R.drawable.stars, R.drawable.drinks, R.drawable.balloon, R.drawable.ligthbulb, R.drawable.zombie, };
+
+	private static final Integer[] numImg = {
+		R.drawable.num1, R.drawable.num2, R.drawable.num3, R.drawable.num4, 
+		R.drawable.num5, R.drawable.num6, R.drawable.num7, R.drawable.num8, R.drawable.num9, R.drawable.num0,  };
+
+	
 	private static final int[] buttons2 = {
 		R.id.text_keystar,
 		R.id.text_keypound
 	};
-
+	
 	public AbsSymDialog(Context c, View mv) {
 		super(c);
-		context = c;
+	    requestWindowFeature(Window.FEATURE_NO_TITLE);
+		parent = (KeyboardView.OnKeyboardActionListener) c;
 		mainview = mv;
 		started = true;
 		setContentView(mv);
@@ -49,13 +72,36 @@ public abstract class AbsSymDialog extends Dialog implements
 		for (int butt : buttons2) {
 			button = mv.findViewById(butt);
 			button.setOnClickListener(this);
+			button.setBackgroundResource(R.drawable.button_gradient_orange);
+			
 		}
 		MAX_PAGE = getMaxPage();
+		title = getTitleText();
+		insSmiley = mv.getResources().getString(R.string.ins_smiley);
+		insSymbol = mv.getResources().getString(R.string.ins_symbol);
+		insPage = mv.getResources().getString(R.string.ins_page);
+
 	}
 
-	// must return a string array the same size as the length of the button string array.
-	abstract String[] getContentDescription();
+	public String getSmileyCD(int index) {
+		String[] smileyCD = mainview.getResources().getStringArray(R.array.smileyCD);
+		return smileyCD[index];
+	}
+	
 
+	protected Integer getSmileyImg(int index) {
+		return smileysImg[index];
+	}
+
+	protected Integer getNumImg(int index) {
+		return numImg[index];
+	}
+	
+	public String getSymbolCD(int index) {	
+		String[] symbolCD = mainview.getResources().getStringArray(R.array.symbolCD);
+	
+		return symbolCD[index];
+	}
 	@Override
 	public void onClick(View v) {
 		// Log.d("SymbolPopup - onClick", "click happen: " + v);
@@ -109,7 +155,7 @@ public abstract class AbsSymDialog extends Dialog implements
 		// Log.d("SymbolDialog - sendChar", "Sending index: " + index);
 
 		if (index < getSymbolSize()) {
-			((KeyboardView.OnKeyboardActionListener) context).onText(getSymbol(index));
+			parent.onText(getSymbol(index));
 			// then close
 			pagenum = 1;
 			pageoffset = (pagenum - 1) * 10;
@@ -127,11 +173,15 @@ public abstract class AbsSymDialog extends Dialog implements
 		pageoffset = (pagenum - 1) * 10;
 		updateButtons();
 	}
-
+	
 	private void updateButtons() {
 		// set page number text
-		setTitle(String.format("%s\t\t%s", getTitleText(),
-				context.getResources().getString(R.string.symbol_page, pagenum, MAX_PAGE)));
+		if (title == "Smiley") {
+				title = insSmiley;
+		} else if (title == "Symbol") {
+			title = insSymbol;
+		}
+		setTitle(title +"\t" + insPage + pagenum + "/" + MAX_PAGE);
 		// update button labels
 		int symbx = pageoffset;
 		int stop = symbx + 9;
@@ -140,19 +190,34 @@ public abstract class AbsSymDialog extends Dialog implements
 		if (nomore >= symsize - 1) {
 			nomore = symsize - 1;
 		}
-		TextView tv;
-		String[] cd = getContentDescription();
-
 		for (int buttx = 0; symbx <= stop; symbx++) {
 			// Log.d("SymbolDialog - updateButtons", "buttx: " + buttx +
 			// " symbx: " + symbx);
 			if (symbx > nomore) {
-				((TextView) mainview.findViewById(buttons[buttx])).setText("");
+				Button buttond = (Button) mainview.findViewById(buttons[buttx]);
+				buttond.setText("");
+				mainview.findViewById(buttons[buttx])
+				.setContentDescription("");
 			} else {
-				tv = (TextView) mainview.findViewById(buttons[buttx]);
-				tv.setText(String.valueOf(getSymbol(symbx)));
-				if (cd != null) {
-					tv.setContentDescription(cd[symbx]);
+				 Button buttond = (Button) mainview.findViewById(buttons[buttx]);
+				TextView title_dialog = (TextView)  mainview.findViewById(R.id.title_symbol_dialog);
+				TextView pagenum_dialog = (TextView)  mainview.findViewById(R.id.title_symbol_pagenum);
+
+				pagenum_dialog.setText(pagenum + "/" + MAX_PAGE);
+				title_dialog.setText(title);
+				pagenum_dialog.setFocusable(true);
+				if (title == insSmiley) {
+					mainview.findViewById(buttons[buttx])
+					.setContentDescription(String.valueOf(getSmileyCD(symbx)));
+					buttond.setBackgroundResource(R.drawable.button_gradient);
+					buttond.setCompoundDrawablesWithIntrinsicBounds(Integer.valueOf(getNumImg(buttx)), 0, Integer.valueOf(getSmileyImg(symbx)), 0);
+				} else if (title == insSymbol) {
+					mainview.findViewById(buttons[buttx])
+					.setContentDescription(String.valueOf(getSymbolCD(symbx)));
+					buttond.setCompoundDrawablesWithIntrinsicBounds(Integer.valueOf(getNumImg(buttx)), 0, 0, 0);
+					buttond.setText(String.valueOf(getSymbol(symbx)));
+					buttond.setBackgroundResource(R.drawable.button_gradient_blue);
+					
 				}
 			}
 			buttx++;
@@ -287,8 +352,10 @@ public abstract class AbsSymDialog extends Dialog implements
 		Window win = getWindow();
 		WindowManager.LayoutParams lp = win.getAttributes();
 		lp.token = v.getWindowToken();
+		lp.y = 1000; 
 		lp.type = WindowManager.LayoutParams.TYPE_APPLICATION_ATTACHED_DIALOG;
 		win.setAttributes(lp);
+		win.setBackgroundDrawableResource(R.drawable.win_bg);
 		win.addFlags(WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM);
 		updateButtons();
 		try {
@@ -298,4 +365,5 @@ public abstract class AbsSymDialog extends Dialog implements
 			Log.e("AbsSymDialog", Arrays.toString(e.getStackTrace()));
 		}
 	}
+
 }

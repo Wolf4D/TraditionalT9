@@ -1,29 +1,25 @@
 package org.nyanya.android.traditionalt9;
 
+
 import android.content.Context;
 import android.view.View;
 
 public class SmileyDialog extends AbsSymDialog {
 
 	private static final String[] symbols = {
-		// lol wiki http://en.wikipedia.org/wiki/List_of_emoticons
-		":-)", ":o)", ":]", ":3", ":c)", ":>", "=]", "=)", ":}", ":-D",
-		"8-D", "X-D", "=-D", "B^D", "<:-)", ">:-[", ":-(", ":-<", ":o(", ":{",
-		":'-(", ":'-)", ":@", "D:<", "D8", "v.v","D-':", ">:O", ":-O", "o_0",
-		":*", ";-)", ";-D", ">:-P", ":-P", "X-P", "=p", ">:-/", ":-/", ":-.",
-		":S", ">.<", ":-|", ":$", ":-X", ":-#", ":-%", ":С", ":-E", ":-*",
-		"0:-3", "0:-)", ">;-)", ">:-)", ">_>", "*<|:-)", "\\o/", "<3", "</3", "=-3", };
+		" ", " ", " ", " ", " ", " ", " ", " ", " ", " ",
+		":-)", ";-D", "X-D", ":-P", ":-|", ":-(", ":-X", ":-B", ":'-(", ":_(",
+		"(*_*)", "<3", "</3", "@}~>~~", ":-*", "X-D", ":@", "o_0",  ">:-)", "/:-]",
+		"( _ )", "●～*", "X-(", "(*¬*)", "d(^_^)b", "<Л:-0", "0:-)", "=:[]", ":-]", ":-Q",
+		":->", ":-I", ":-0", "=^.^=", ":o3", "=8)", ":o)", "B^D", " :-!", "{}",
+		"(-_-;)",  "=p", "(-.-)Zzz…", "(^^)/~~~", "%-)", "☆彡 ☆ミ", ":*)", "o○", "[i]",  ":-#", };
+
 
 	private static final int MAX_PAGE = (int) Math.ceil(symbols.length / 10.0);
-
+	
 	public SmileyDialog(Context c, View mv) {
 		super(c, mv);
-
-	}
-
-	@Override
-	String[] getContentDescription() {
-		return context.getResources().getStringArray(R.array.smileyContentDescription);
+        
 	}
 
 	@Override
@@ -33,7 +29,7 @@ public class SmileyDialog extends AbsSymDialog {
 
 	@Override
 	protected String getTitleText() {
-		return context.getString(R.string.smiley_insert);
+		return "Smiley";
 	}
 
 	@Override

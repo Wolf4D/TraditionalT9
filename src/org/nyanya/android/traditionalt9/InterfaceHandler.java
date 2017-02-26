@@ -1,7 +1,10 @@
 package org.nyanya.android.traditionalt9;
 
+import android.content.Context;
 import android.view.KeyEvent;
 import android.view.View;
+import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 import android.widget.ViewSwitcher;
@@ -41,7 +44,6 @@ public class InterfaceHandler implements View.OnClickListener, View.OnLongClickL
 			id = R.id.main_left;
 			break;
 		case KeyEvent.KEYCODE_SOFT_RIGHT:
-		case KeyEvent.KEYCODE_TAB:
 			id = R.id.main_right;
 			break;
 		case KeyEvent.KEYCODE_DPAD_CENTER:

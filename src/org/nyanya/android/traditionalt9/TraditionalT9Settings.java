@@ -3,41 +3,7 @@ package org.nyanya.android.traditionalt9;
 /*
 	Source for English dictionary: http://wordlist.sourceforge.net/
 	Source for Russian dictionary: Various sources from Russian user
-	Source for German dictionary: Modified version from http://www.winedt.org/Dict/
-	Source for French dictionary: http://www.pallier.org/ressources/dicofr/dicofr.html
  */
-
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.ListActivity;
-import android.app.ProgressDialog;
-import android.content.Context;
-import android.content.DialogInterface;
-import android.content.Intent;
-import android.content.res.Resources;
-import android.database.Cursor;
-import android.database.DatabaseUtils.InsertHelper;
-import android.database.sqlite.SQLiteDatabase;
-import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.SystemClock;
-import android.text.TextUtils;
-import android.util.Log;
-import android.view.View;
-import android.widget.ListAdapter;
-import android.widget.ListView;
-import android.widget.Toast;
-
-import com.stackoverflow.answer.UnicodeBOMInputStream;
-
-import org.nyanya.android.traditionalt9.LangHelper.LANGUAGE;
-import org.nyanya.android.traditionalt9.T9DB.DBSettings.SETTING;
-import org.nyanya.android.traditionalt9.settings.CustomInflater;
-import org.nyanya.android.traditionalt9.settings.Setting;
-import org.nyanya.android.traditionalt9.settings.SettingAdapter;
 
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
@@ -55,12 +21,41 @@ import java.io.UnsupportedEncodingException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Properties;
 
-public class TraditionalT9Settings extends ListActivity implements
+import android.app.Activity;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
+import android.content.Context;
+import android.content.DialogInterface;
+import android.content.Intent;
+import android.content.SharedPreferences;
+import android.content.res.Resources;
+import android.database.Cursor;
+import android.database.DatabaseUtils.InsertHelper;
+import android.database.sqlite.SQLiteDatabase;
+import android.net.Uri;
+import android.os.AsyncTask;
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.SystemClock;
+import android.preference.ListPreference;
+import android.preference.Preference;
+import android.preference.PreferenceActivity;
+import android.preference.PreferenceManager;
+import android.text.TextUtils;
+import android.util.Log;
+import android.widget.Toast;
+
+import com.stackoverflow.answer.UnicodeBOMInputStream;
+
+import pl.wavesoftware.widget.MultiSelectListPreference;
+
+public class TraditionalT9Settings extends PreferenceActivity implements
 		DialogInterface.OnCancelListener {
 
 	AsyncTask<String, Integer, Reply> task = null;
@@ -87,7 +82,7 @@ public class TraditionalT9Settings extends ListActivity implements
 
 		protected Reply() {
 			this.status = true;
-			this.msgs = new ArrayList<String>(4);
+			this.msgs = new LinkedList<String>();
 		}
 
 		protected void addMsg(String msg) throws LoadException {
@@ -122,7 +117,7 @@ public class TraditionalT9Settings extends ListActivity implements
 		}
 	}
 
-	private static void closeStream(Closeable is, Reply reply) {
+	private void closeStream(Closeable is, Reply reply) {
 		if (is == null) {
 			return;
 		}
@@ -145,9 +140,9 @@ public class TraditionalT9Settings extends ListActivity implements
 		boolean internal;
 		boolean restore;
 		String[] dicts;
-		LANGUAGE[] mSupportedLanguages;
+		int[] mSupportedLanguages;
 
-		LoadDictTask(int msgid, boolean intern, boolean restorebackup, LANGUAGE[] supportedLanguages) {
+		LoadDictTask(int msgid, boolean intern, boolean restorebackup, int[] supportedLanguages) {
 			internal = intern;
 			restore = restorebackup;
 
@@ -155,9 +150,11 @@ public class TraditionalT9Settings extends ListActivity implements
 			dicts = new String[suplanglen];
 			for (int x=0; x<suplanglen; x++) {
 				if (intern) {
-					dicts[x] = String.format(dictname, supportedLanguages[x].name().toLowerCase(Locale.ENGLISH));
+					dicts[x] = String.format(dictname,
+							LangHelper.LANGS[supportedLanguages[x]].toLowerCase(Locale.ENGLISH));
 				} else {
-					dicts[x] = String.format(userdictname, supportedLanguages[x].name().toLowerCase(Locale.ENGLISH));
+					dicts[x] = String.format(userdictname,
+							LangHelper.LANGS[supportedLanguages[x]].toLowerCase(Locale.ENGLISH));
 				}
 			}
 			mSupportedLanguages = supportedLanguages;
@@ -244,7 +241,7 @@ public class TraditionalT9Settings extends ListActivity implements
 			// add characters first, then dictionary:
 			Log.d("doInBackground", "Adding characters...");
 			// load characters from supported langs
-			for (LANGUAGE lang : mSupportedLanguages) {
+			for (int lang : mSupportedLanguages) {
 				processChars(db, lang);
 			}
 			Log.d("doInBackground", "done.");
@@ -258,7 +255,7 @@ public class TraditionalT9Settings extends ListActivity implements
 					try {
 						dictstream = new FileInputStream(new File(
 								new File(Environment.getExternalStorageDirectory(), sddir),	backupname));
-						reply = processFile(dictstream, reply, db, LANGUAGE.NONE, backupname);
+						reply = processFile(dictstream, reply, db, -1, backupname);
 					} catch (FileNotFoundException e) {
 						reply.status = false;
 						reply.forceMsg("Backup file not found: " + e.getMessage());
@@ -322,7 +319,7 @@ public class TraditionalT9Settings extends ListActivity implements
 			return reply;
 		}
 
-		private void processChars(SQLiteDatabase db, LANGUAGE lang) {
+		private void processChars(SQLiteDatabase db, int lang) {
 			InsertHelper wordhelp = new InsertHelper(db, T9DB.WORD_TABLE_NAME);
 
 			final int wordColumn = wordhelp.getColumnIndex(T9DB.COLUMN_WORD);
@@ -330,37 +327,13 @@ public class TraditionalT9Settings extends ListActivity implements
 			final int freqColumn = wordhelp.getColumnIndex(T9DB.COLUMN_FREQUENCY);
 			final int seqColumn = wordhelp.getColumnIndex(T9DB.COLUMN_SEQ);
 
-			try {
-				// load CHARTABLE and then load T9table, just to cover all bases.
-				for (Map.Entry<Character, Integer> entry : CharMap.CHARTABLE.get(lang.index).entrySet()) {
-					wordhelp.prepareForReplace();
-					wordhelp.bind(langColumn, lang.id);
-					wordhelp.bind(seqColumn, Integer.toString(entry.getValue()));
-					wordhelp.bind(wordColumn, Character.toString(entry.getKey()));
-					wordhelp.bind(freqColumn, 0);
-					wordhelp.execute();
-					// upper case
-					wordhelp.prepareForReplace();
-					wordhelp.bind(langColumn, lang.id);
-					wordhelp.bind(seqColumn, Integer.toString(entry.getValue()));
-					wordhelp.bind(wordColumn, Character.toString(Character.toUpperCase(entry.getKey())));
-					wordhelp.bind(freqColumn, 0);
-					wordhelp.execute();
-				}
-				char[][] chartable = CharMap.T9TABLE[lang.index];
-				for (int numkey = 0; numkey < chartable.length; numkey++) {
-					char[] chars = chartable[numkey];
-					for (int charindex = 0; charindex < chars.length; charindex++) {
-						wordhelp.prepareForReplace();
-						wordhelp.bind(langColumn, lang.id);
-						wordhelp.bind(seqColumn, Integer.toString(numkey));
-						wordhelp.bind(wordColumn, Character.toString(chars[charindex]));
-						wordhelp.bind(freqColumn, 0);
-						wordhelp.execute();
-					}
-				}
-			} finally {
-				wordhelp.close();
+			for (Map.Entry<Character, Integer> entry : CharMap.CHARTABLE.get(lang).entrySet()) {
+				wordhelp.prepareForReplace();
+				wordhelp.bind(langColumn, Integer.toString(lang));
+				wordhelp.bind(seqColumn, Integer.toString(entry.getValue()));
+				wordhelp.bind(wordColumn, Character.toString(entry.getKey()));
+				wordhelp.bind(freqColumn, 0);
+				wordhelp.execute();
 			}
 		}
 
@@ -375,7 +348,7 @@ public class TraditionalT9Settings extends ListActivity implements
 			return null;
 		}
 
-		private Reply processFile(InputStream is, Reply rpl, SQLiteDatabase db, LANGUAGE lang, String fname)
+		private Reply processFile(InputStream is, Reply rpl, SQLiteDatabase db, int lang, String fname)
 				throws LoadException, IOException {
 			long last = 0;
 			UnicodeBOMInputStream ubis = new UnicodeBOMInputStream(is);
@@ -415,21 +388,21 @@ public class TraditionalT9Settings extends ListActivity implements
 							rpl.addMsg("Number error ("+fname+") at line " + linecount+". Using 0 for frequency.");
 							freq = 0;
 						}
-						if (lang == LANGUAGE.NONE && ws.length == 3) {
+						if (lang == -1 && ws.length == 3) {
 							try {
-								lang = LANGUAGE.get(Integer.parseInt(ws[2]));
+								lang = Integer.parseInt(ws[2]);
 							} catch (NumberFormatException e) {
 								rpl.status = false;
-								rpl.addMsg("Number error ("+fname+") at line " + linecount+". Using 1 (en) for language.");
-								lang = LANGUAGE.EN;
+								rpl.addMsg("Number error ("+fname+") at line " + linecount+". Using 0 (en) for language.");
+								lang = 0;
 							}
-							if (lang == null) {
+							if (lang >= LangHelper.LANGS.length) {
 								rpl.status = false;
-								rpl.addMsg("Unsupported language ("+fname+") at line " + linecount+". Trying 1 (en) for language.");
-								lang = LANGUAGE.EN;
+								rpl.addMsg("Unsupported language ("+fname+") at line " + linecount+". Trying 0 (en) for language.");
+								lang = 0;
 							}
-						} else if (lang == LANGUAGE.NONE) {
-							lang = LANGUAGE.EN;
+						} else if (lang == -1) {
+							lang = 0;
 						}
 					} else {
 						freq = 0;
@@ -452,13 +425,13 @@ public class TraditionalT9Settings extends ListActivity implements
 						rpl.status = false;
 						rpl.addMsg("Error on word ("+word+") line "+
 								linecount+" in (" +	fname+"): "+
-								getResources().getString(R.string.add_word_badchar, lang.name(), word));
+								getResources().getString(R.string.add_word_badchar, LangHelper.LANGS[lang]));
 						break;
 					}
 					linecount++;
 					wordhelp.prepareForReplace();
 					wordhelp.bind(seqColumn, seq);
-					wordhelp.bind(langColumn, lang.id);
+					wordhelp.bind(langColumn, lang);
 					wordhelp.bind(wordColumn, word);
 					wordhelp.bind(freqColumn, freq);
 					wordhelp.execute();
@@ -468,12 +441,12 @@ public class TraditionalT9Settings extends ListActivity implements
 					if ((pos - last) > 4096) {
 						// Log.d("doInBackground", "line: " + linecount);
 						// Log.d("doInBackground", "word: " + word);
-						if (size >= 0) { publishProgress((int) ((float) pos / size * 10000)); }
+						publishProgress((int) ((float) pos / size * 10000));
 						last = pos;
 					}
 					word = getLine(br, rpl, fname);
 				}
-				publishProgress((int) ((float) pos / size * 10000));
+				publishProgress(10000);
 				db.setTransactionSuccessful();
 			} finally {
 				db.setLockingEnabled(true);
@@ -604,7 +577,7 @@ public class TraditionalT9Settings extends ListActivity implements
 					cur.close();
 				}
 			} finally {
-				cur.close();
+
 			}
 			publishProgress(10000);
 
@@ -613,6 +586,10 @@ public class TraditionalT9Settings extends ListActivity implements
 			Log.d("doInBackground", "entries: " + entries + " last: " + pos);
 			try {
 				bw.flush();
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			try {
 				bw.close();
 			} catch (IOException e) {
 				e.printStackTrace();
@@ -686,46 +663,86 @@ public class TraditionalT9Settings extends ListActivity implements
 	@Override
 	protected void onCreate(Bundle savedInstanceState) {
 		super.onCreate(savedInstanceState);
+		addPreferencesFromResource(R.xml.prefs);
 
-		// maybe need this?
-		// http://stackoverflow.com/questions/7645880/listview-with-onitemclicklistener-android
-
-		// get settings
-		Object[] settings = T9DB.getInstance(this).getSettings(new SETTING[]
-				// 0, 1, 2
-				{SETTING.INPUT_MODE, SETTING.LANG_SUPPORT, SETTING.MODE_NOTIFY});
-		ListAdapter settingitems;
-		try {
-			settingitems = new SettingAdapter(this, CustomInflater.inflate(this, R.xml.prefs, settings));
-		} catch (Exception e) {
-			e.printStackTrace();
-			return;
+		Preference button = getPreferenceManager().findPreference("help");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					openHelp();
+					return true;
+				}
+			});
 		}
-		setContentView(R.layout.preference_list_content);
-		setListAdapter(settingitems);
+
+		button = getPreferenceManager().findPreference("loaddict");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					preloader(R.string.pref_loadingdict, true, false);
+					return true;
+				}
+			});
+		}
+
+		button = getPreferenceManager().findPreference("loaduserdict");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					preloader(R.string.pref_loadinguserdict, false, false);
+					return true;
+				}
+			});
+		}
+
+		button = getPreferenceManager().findPreference("nukedict");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					nukeDict();
+					return true;
+				}
+			});
+		}
+
+		button = getPreferenceManager().findPreference("backupdict");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					backupDict();
+					return true;
+				}
+			});
+		}
+
+		button = getPreferenceManager().findPreference("restoredict");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					restoreDict();
+					return true;
+				}
+			});
+		}
+
+		button = getPreferenceManager().findPreference("querytest");
+		if (button != null) {
+			button.setOnPreferenceClickListener(new Preference.OnPreferenceClickListener() {
+				@Override
+				public boolean onPreferenceClick(Preference arg0) {
+					test();
+					return true;
+				}
+			});
+		}
+
 		mContext = this;
-
-	}
-
-	@Override
-	protected  void onListItemClick(ListView l, View v, int position, long id) {
-		Setting s = (Setting)getListView().getItemAtPosition(position);
-		if (s.id.equals("help"))
-			openHelp();
-		else if (s.id.equals("loaddict"))
-			preloader(R.string.pref_loadingdict, true, false);
-		else if (s.id.equals("loaduserdict"))
-			preloader(R.string.pref_loadinguserdict, false, false);
-		else if (s.id.equals("nukedict"))
-			nukeDict();
-		else if (s.id.equals("backupdict"))
-			backupDict();
-		else if (s.id.equals("restoredict"))
-			restoreDict();
-		else if (s.id.equals("reloadKeys"))
-			KeyMap.setKeys();
-		else
-			s.clicked(mContext);
 	}
 
 	private void openHelp() {
@@ -738,7 +755,7 @@ public class TraditionalT9Settings extends ListActivity implements
 	private void preloader(int msgid, boolean internal, boolean restorebackup) {
 
 		task = new LoadDictTask(msgid, internal, restorebackup,
-				LangHelper.buildLangs(T9DB.getInstance(mContext).getSettingInt(SETTING.LANG_SUPPORT)));
+				LangHelper.buildLangs(((ListPreference) findPreference("pref_lang_support")).getValue()));
 		task.execute();
 	}
 
@@ -748,23 +765,15 @@ public class TraditionalT9Settings extends ListActivity implements
 	}
 
 	private void nukeDict() {
-
 		AlertDialog.Builder builder = new AlertDialog.Builder(this);
 		builder.setMessage(R.string.pref_nuke_warn).setTitle(R.string.pref_nuke_title)
-				.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
 						task = new NukeDictTask(R.string.pref_nukingdict);
 						task.execute();
-						// restart settings to get fresh settings.
-						TraditionalT9Settings.this.finish();
-						new Handler().postDelayed(new Runnable() {
-							@Override
-							public void run() {
-								startActivity(new Intent(TraditionalT9Settings.this, TraditionalT9Settings.class));
-							}}, 1000);
 					}
-				}).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+				}).setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 			@Override
 			public void onClick(DialogInterface dialog, int id) {
 				dialog.dismiss();
@@ -789,12 +798,12 @@ public class TraditionalT9Settings extends ListActivity implements
 			saveloc = new File(saveloc, backupname);
 			if (saveloc.exists()) {
 				builder.setMessage(R.string.pref_backup_warn).setTitle(R.string.pref_backup_title)
-						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+						.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface dialog, int id) {
 								predumper(R.string.pref_savingbackup);
 							}
-						}).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+						}).setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
 						dialog.dismiss();
@@ -816,7 +825,7 @@ public class TraditionalT9Settings extends ListActivity implements
 
 	private void showErrorDialog(AlertDialog.Builder builder, CharSequence title, CharSequence msg) {
 		builder.setMessage(msg).setTitle(title)
-				.setNeutralButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
 						dialog.dismiss();
@@ -828,7 +837,7 @@ public class TraditionalT9Settings extends ListActivity implements
 
 	private void showErrorDialogID(AlertDialog.Builder builder, int titleid, int msgid) {
 		builder.setMessage(msgid).setTitle(titleid)
-				.setNeutralButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+				.setNeutralButton(R.string.ok, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
 						dialog.dismiss();
@@ -852,12 +861,12 @@ public class TraditionalT9Settings extends ListActivity implements
 								res.getString(R.string.pref_restore_warn,
 										res.getString(R.string.pref_nukedict)))
 						.setTitle(R.string.pref_restore_title)
-						.setPositiveButton(android.R.string.ok, new DialogInterface.OnClickListener() {
+						.setPositiveButton(R.string.ok, new DialogInterface.OnClickListener() {
 							@Override
 							public void onClick(DialogInterface dialog, int id) {
 								preloader(R.string.pref_loadingbackup, false, true);
 							}
-						}).setNegativeButton(android.R.string.cancel, new DialogInterface.OnClickListener() {
+						}).setNegativeButton(R.string.cancel, new DialogInterface.OnClickListener() {
 					@Override
 					public void onClick(DialogInterface dialog, int id) {
 						dialog.dismiss();
@@ -884,17 +893,17 @@ public class TraditionalT9Settings extends ListActivity implements
 
 		T9DB tdb = T9DB.getInstance(this);
 		Log.d("queryTestDebug", "Testing...");
-		tdb.updateWords("123", words, ids, 0, LangHelper.LANGUAGE.EN);
+		tdb.updateWords("123", words, ids, 0, LangHelper.EN);
 		Log.d("queryTestDebug", "123->" + words.toString());
 		Log.d("queryTestDebug", "269->");
-		tdb.updateWords("269", words, ids, 0, LangHelper.LANGUAGE.EN);
+		tdb.updateWords("269", words, ids, 0, LangHelper.EN);
 		Iterator<String> i = words.iterator();
 		while (i.hasNext()) {
 			Log.d("queryTestDebug", "word: " + i.next());
 		}
 
 		Log.d("queryTestDebug", "228->");
-		tdb.updateWords("228", words, ids, 0, LangHelper.LANGUAGE.EN);
+		tdb.updateWords("228", words, ids, 0, LangHelper.EN);
 		i = words.iterator();
 		while (i.hasNext()) {
 			Log.d("queryTestDebug", "word: " + i.next());
@@ -932,7 +941,7 @@ public class TraditionalT9Settings extends ListActivity implements
 
 		T9DB tdb = T9DB.getInstance(this);
 
-		tdb.updateWords("222", words, ids, 0, LangHelper.LANGUAGE.EN);
+		tdb.updateWords("222", words, ids, 0, LangHelper.EN);
 		size = ids.size();
 		if (size > 0) {
 			tdb.incrementWord(ids.get(0));
@@ -948,7 +957,7 @@ public class TraditionalT9Settings extends ListActivity implements
 		Log.d("TIMING", "Execution time: " + (endnow - startnow) + " ms");
 
 		List<Integer> freqs = new ArrayList<Integer>(8);
-		//tdb.updateWordsW("222", words, ids, freqs, LangHelper.EN);
+		tdb.updateWordsW("222", words, ids, freqs, LangHelper.EN);
 		Log.d("VALUES", "...");
 		size = freqs.size();
 		for (int x = 0; x < size; x++) {
@@ -957,7 +966,13 @@ public class TraditionalT9Settings extends ListActivity implements
 		}
 		Log.d("queryTestSingle", "done.");
 	}
-
+	private void test() {
+		SharedPreferences pref = PreferenceManager.getDefaultSharedPreferences(this);
+		if ( "".equalsIgnoreCase(pref.getString("pref_lang_support", null)) ) {
+			Log.d("T9Settings.test", "AAAAAAAAAA blank string");
+		}
+		Log.d("T9Settings.test", pref.getString("pref_lang_support", "aaaaaaaaaa"));
+	}
 	@Override
 	public void onCancel(DialogInterface dint) {
 		task.cancel(false);

@@ -1,6 +1,10 @@
 package pl.wavesoftware.widget;
 // https://gist.github.com/cardil/4754571/07b4b6ffd37b440bbdec2cafa1ab7411c5ad3873
 // modified to work specifically for this service
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
 
 import android.app.AlertDialog.Builder;
 import android.content.Context;
@@ -8,18 +12,13 @@ import android.content.DialogInterface;
 import android.content.DialogInterface.OnMultiChoiceClickListener;
 import android.content.res.TypedArray;
 import android.preference.ListPreference;
-import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Log;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 public class MultiSelectListPreference extends ListPreference {
 
 	private String separator;
-	private static final String DEFAULT_SEPARATOR = "|";
+	private static final String DEFAULT_SEPARATOR = "\u0001\u0007\u001D\u0007\u0001";
 	private boolean[] entryChecked;
 
 	public MultiSelectListPreference(Context context, AttributeSet attributeSet) {
@@ -56,7 +55,7 @@ public class MultiSelectListPreference extends ListPreference {
 		if (val == null || "".equals(val)) {
 			return new CharSequence[0];
 		} else {
-			return ((String) val).split("\\"+separator);
+			return ((String) val).split(separator);
 		}
 	}
 
@@ -66,9 +65,9 @@ public class MultiSelectListPreference extends ListPreference {
 			//Log.w("MultiSelectPref.defaultunpack", "val is null or empty");
 			return new int[] {0}; //default pref
 		} else {
-			String[] sa = ((String) val).split("\\"+DEFAULT_SEPARATOR);
+			String[] sa = ((String) val).split(DEFAULT_SEPARATOR);
 			if (sa.length < 1) {
-				Log.w("MSLPref.defaultunpack", "split is less than 1");
+				Log.w("MultiSelectPref.defaultunpack", "split is less than 1");
 				return new int[] {0}; //default pref
 			}
 			int[] ia = new int[sa.length];
@@ -116,7 +115,7 @@ public class MultiSelectListPreference extends ListPreference {
 				}
 			}
 
-			String value = TextUtils.join(separator, values);
+			String value = join(values, separator);
 			setSummary(prepareSummary(values));
 			setValueAndEvent(value);
 		}
@@ -144,7 +143,7 @@ public class MultiSelectListPreference extends ListPreference {
 			}
 			ix += 1;
 		}
-		return TextUtils.join(", ", titles);
+		return join(titles, ", ");
 	}
 
 	@Override
@@ -158,11 +157,12 @@ public class MultiSelectListPreference extends ListPreference {
 		String value = null;
 		CharSequence[] defaultValue;
 		if (rawDefaultValue == null) {
-			defaultValue = new CharSequence[] {"0"};
+			defaultValue = new CharSequence[0];
 		} else {
 			defaultValue = (CharSequence[]) rawDefaultValue;
 		}
-		String joinedDefaultValue = TextUtils.join(separator, defaultValue);
+		List<CharSequence> joined = Arrays.asList(defaultValue);
+		String joinedDefaultValue = join(joined, separator);
 		if (restoreValue) {
 			value = getPersistedString(joinedDefaultValue);
 		} else {
@@ -171,6 +171,28 @@ public class MultiSelectListPreference extends ListPreference {
 
 		setSummary(prepareSummary(Arrays.asList(unpack(value))));
 		setValueAndEvent(value);
+	}
+
+	/**
+	 * Joins array of object to single string by separator
+	 *
+	 * Credits to kurellajunior on this post
+	 * http://snippets.dzone.com/posts/show/91
+	 *
+	 * @param iterable
+	 *            any kind of iterable ex.: <code>["a", "b", "c"]</code>
+	 * @param separator
+	 *            separetes entries ex.: <code>","</code>
+	 * @return joined string ex.: <code>"a,b,c"</code>
+	 */
+	protected static String join(Iterable<?> iterable, String separator) {
+		Iterator<?> oIter;
+		if (iterable == null || (!(oIter = iterable.iterator()).hasNext()))
+			return "";
+		StringBuilder oBuilder = new StringBuilder(String.valueOf(oIter.next()));
+		while (oIter.hasNext())
+			oBuilder.append(separator).append(oIter.next());
+		return oBuilder.toString();
 	}
 
 }
